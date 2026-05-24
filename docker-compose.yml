@@ -1,0 +1,49 @@
+services:
+  cto-site-a:
+    build: .
+    container_name: cto-site-a
+    networks: [cto_net]
+    ports: ["8001:8000"]
+    environment:
+      SITE_ID: "0"
+      SCHED_MODE: "${SCHED_MODE:-cto}"
+      DUMMY_INTERVAL_MS: "${DUMMY_INTERVAL_MS:-50}"
+      STALL_WARN_MS: "${STALL_WARN_MS:-5000}"
+      DB_PATH: "/app/data/site_a.db"
+      PEER_URLS: "http://cto-site-b:8000,http://cto-site-c:8000"
+    volumes:
+      - ./data:/app/data
+
+  cto-site-b:
+    build: .
+    container_name: cto-site-b
+    networks: [cto_net]
+    ports: ["8002:8000"]
+    environment:
+      SITE_ID: "1"
+      SCHED_MODE: "${SCHED_MODE:-cto}"
+      DUMMY_INTERVAL_MS: "${DUMMY_INTERVAL_MS:-50}"
+      STALL_WARN_MS: "${STALL_WARN_MS:-5000}"
+      DB_PATH: "/app/data/site_b.db"
+      PEER_URLS: "http://cto-site-a:8000,http://cto-site-c:8000"
+    volumes:
+      - ./data:/app/data
+
+  cto-site-c:
+    build: .
+    container_name: cto-site-c
+    networks: [cto_net]
+    ports: ["8003:8000"]
+    environment:
+      SITE_ID: "2"
+      SCHED_MODE: "${SCHED_MODE:-cto}"
+      DUMMY_INTERVAL_MS: "${DUMMY_INTERVAL_MS:-50}"
+      STALL_WARN_MS: "${STALL_WARN_MS:-5000}"
+      DB_PATH: "/app/data/site_c.db"
+      PEER_URLS: "http://cto-site-a:8000,http://cto-site-b:8000"
+    volumes:
+      - ./data:/app/data
+
+networks:
+  cto_net:
+    driver: bridge

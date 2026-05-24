@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+
+# Database files (generated, not source)
+data/site_*.db
+data/*.db-journal
+data/*.db-shm
+data/*.db-wal
+
+# Experiment results (all raw data, including subdirectories)
+experiments/results/
+
+# Test / lint caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Log files
+*.log
+
+# Claude Code (AI tool operational files — not part of deliverables)
+CLAUDE.md
+.claude/
+PROMPT_CTO_Project27.md
