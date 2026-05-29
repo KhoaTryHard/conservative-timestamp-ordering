@@ -112,7 +112,23 @@ Results are JSON — `avg_ms`, `p95_ms`, `p99_ms`, `total_restarts` per run.
 ## Trigger Failure Scenario (D5)
 
 ```bash
-# Terminal 1 — cluster already running
+# Terminal 1 — start CTO cluster
+SCHED_MODE=cto docker compose up --build
+
+# Terminal 2 — deterministic failure demo
+python -m experiments.demo_failure --mode cto --seed 42 --kill-site 1 \
+  --kill-delay-sec 5 --restart-delay-sec 8 \
+  --out experiments/results/cto_failure.json
+```
+
+The demo script validates `/healthz`, avoids sending client requests directly to the
+killed container, runs a live-site stall probe during the failure window, then restarts
+`cto-site-b` and writes JSON evidence. Use `--manual-failure` if you want to run
+`docker kill cto-site-b` and `docker start cto-site-b` yourself during a recording.
+
+Legacy manual flow:
+
+```bash
 docker compose up --build
 
 # Terminal 2 — run experiment; kill site_b mid-way
