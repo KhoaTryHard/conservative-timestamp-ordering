@@ -95,5 +95,5 @@
 - [x] Template 7-mục và 5-deliverable giữ nguyên?
 - [x] Vietnamese prose / English code — đúng cả hai?
 - [x] Không bỏ qua bước nào trong 7-task workflow?
-- [x] `hash(machine_id) % 3` nhất quán giữa TM, DataGenerator, tests?
+- [x] `stable_hash(machine_id) % 3` nhất quán giữa TM, DataGenerator, tests?
 - [x] `DUMMY_INTERVAL_MS` tunable qua env var, không hard-code trong scheduler?

@@ -2,7 +2,7 @@
 
 **Project #27 — Category 3 — Distributed Concurrency Control** · Team `[TBD]`
 
-Hệ thống hiện thực giao thức **Conservative Timestamp Ordering (CTO)** trên 3 site (`site_a/b/c`) tương ứng 3 phân xưởng. Mỗi site host đầy đủ 3 module — `TransactionManager` (TM), `ConservativeScheduler` (SC), `DataProcessor` (DP) — giao tiếp qua HTTP/REST (FastAPI + httpx async). Dữ liệu `Assembly_Line_Steps` phân mảnh ngang: `site_index = hash(machine_id) % 3`.
+Hệ thống hiện thực giao thức **Conservative Timestamp Ordering (CTO)** trên 3 site (`site_a/b/c`) tương ứng 3 phân xưởng. Mỗi site host đầy đủ 3 module — `TransactionManager` (TM), `ConservativeScheduler` (SC), `DataProcessor` (DP) — giao tiếp qua HTTP/REST (FastAPI + httpx async). Dữ liệu `Assembly_Line_Steps` phân mảnh ngang: `site_index = stable_hash(machine_id) % 3` bằng `hashlib.blake2b`.
 
 ## 1. Component diagram
 

@@ -56,7 +56,7 @@
 ## 4. Quyết định quan trọng & lý do
 
 ### Architecture (FROZEN — không đổi)
-- **Hash partitioning `hash(machine_id) % 3`** — cả 2 scheduler dùng chung. Đổi formula phải update cả 2 + tests.
+- **Stable hash partitioning `stable_hash(machine_id) % 3` bằng `hashlib.blake2b`** — cả 2 scheduler dùng chung. Đổi formula phải update cả 2 + tests + regenerate dataset.
 - **3 sites cố định** — đại diện 3 phân xưởng dây chuyền Automated Manufacturing.
 - **SQLite per site** — cô lập failure domain, phù hợp scope assignment.
 

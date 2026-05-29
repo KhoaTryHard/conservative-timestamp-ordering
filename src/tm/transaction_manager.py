@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 
 import httpx
@@ -59,9 +60,7 @@ class TransactionManager:
         result = await self._post_op(site, op)
         return result.value or ""
 
-    async def write(
-        self, tx_id: str, step_id: int, machine_id: str, status: str
-    ) -> None:
+    async def write(self, tx_id: str, step_id: int, machine_id: str, status: str) -> None:
         """Route WRITE(step_id, status) to site_for_machine(machine_id)."""
         tx = self._txs[tx_id]
         site = site_for_machine(machine_id)
@@ -107,9 +106,10 @@ class TransactionManager:
 
 
 def site_for_machine(machine_id: str, num_sites: int = 3) -> int:
-    """Deterministic hash partition: site_index = hash(machine_id) % num_sites.
+    """Stable hash partition: site_index = stable_hash(machine_id) % num_sites.
 
     Single source of truth for data placement. Used by TM and data_generator.
     NEVER change the hash function without also updating tests and re-partitioning data.
     """
-    return hash(machine_id) % num_sites
+    digest = hashlib.blake2b(machine_id.encode("utf-8"), digest_size=8).digest()
+    return int.from_bytes(digest, "big") % num_sites

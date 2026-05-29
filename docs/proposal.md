@@ -30,7 +30,7 @@
 
   Bảng phụ `step_meta(step_id, rts, wts)` lưu cặp timestamp đọc/ghi theo §5.2.2 *(tr. 198)*.
 
-- **Fragmentation Strategy:** Horizontal **hash partitioning** — `site_index = hash(machine_id) % 3`. Mỗi site sở hữu ~33% tuple. Theo nguyên tắc fragmentation, hash phù hợp khi predicate truy cập dựa trên *equality* của attribute phân mảnh (đúng với workload `WHERE machine_id = ?`). Phép `hash` dùng `hashlib.blake2b(...).digest()[:8]` để deterministic xuyên process.
+- **Fragmentation Strategy:** Horizontal **stable hash partitioning** — `site_index = stable_hash(machine_id) % 3`. Mỗi site sở hữu ~33% tuple. Theo nguyên tắc fragmentation, hash phù hợp khi predicate truy cập dựa trên *equality* của attribute phân mảnh (đúng với workload `WHERE machine_id = ?`). Phép `stable_hash` dùng `hashlib.blake2b(..., digest_size=8)` để deterministic xuyên process.
 
 ## 4. System Architecture
 
@@ -65,7 +65,7 @@
 - **Milestone 1 (Week 5) — Environment setup & data fragmentation complete:**
   - `data/data_generator.py` sinh 10k rows `Assembly_Line_Steps` với seed cố định.
   - `docker-compose.yml` boot 3 sites, mỗi site có FastAPI + SQLite riêng.
-  - Hàm `get_site_for_machine(machine_id) -> int` (hash mod 3) verified bằng unit test phân bổ đều.
+  - Hàm `site_for_machine(machine_id) -> int` (stable hash mod 3) verified bằng unit test phân bổ đều và cross-process.
 - **Milestone 2 (Week 8) — Core algorithm operational:**
   - `TransactionManager`: cấp `ts = (counter_local, site_id)`, dispatch ops tới các scheduler liên quan.
   - `ConservativeScheduler`: hiện thực queue `Q^t_s` (priority queue theo ts), release-rule "all queues non-empty + min ts".

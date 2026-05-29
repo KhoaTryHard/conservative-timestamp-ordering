@@ -75,7 +75,7 @@ Ba sites tương đương nhau; mỗi site có:
 
 ### 3.2 Phân mảnh dữ liệu
 
-Horizontal hash partitioning: `site_index = hash(machine_id) % 3`. Bảng `Assembly_Line_Steps(StepID INT PK, MachineID TEXT, Status TEXT)` phân tán đồng đều ~33% mỗi site. Kiểm chứng phân phối: test `test_distribution_is_balanced` xác nhận 850–1150 bản ghi/site trên 3000 machines.
+Horizontal stable hash partitioning: `site_index = stable_hash(machine_id) % 3` bằng `hashlib.blake2b`. Bảng `Assembly_Line_Steps(StepID INT PK, MachineID TEXT, Status TEXT)` phân tán đồng đều ~33% mỗi site. Kiểm chứng phân phối: test `test_distribution_is_balanced` xác nhận 850–1150 bản ghi/site trên 3000 machines.
 
 ### 3.3 Timestamp
 
@@ -100,7 +100,7 @@ Ba loại transaction mô phỏng dây chuyền sản xuất:
 |---|---|---|
 | Dạng CTO | Extremely-conservative (all queues non-empty) | Đơn giản nhất để chứng minh đúng; không cần phân lớp operation *(§5.2.2.2, tr. 201)* |
 | Timestamp | `(counter, site_id)` — không dùng NTP | Tránh phụ thuộc clock đồng bộ; tiebreak deterministc |
-| Phân mảnh | `hash(machine_id) % 3` | Phân phối đồng đều; deterministic routing không cần metadata lookup |
+| Phân mảnh | `stable_hash(machine_id) % 3` | Phân phối đồng đều; deterministic routing không cần metadata lookup |
 | T_dummy mặc định | 50 ms | Điểm khởi đầu cân bằng giữa overhead và block time; tunable qua env var |
 | Storage | SQLite per site | Đơn giản, không cần external DB; phù hợp quy mô thí nghiệm |
 | Transport | FastAPI + httpx async | Non-blocking I/O; tương thích asyncio scheduler loop |
@@ -113,7 +113,7 @@ Ba loại transaction mô phỏng dây chuyền sản xuất:
 ### 5.1 Môi trường
 
 - **Platform:** Docker Compose, 3 containers trên cùng bridge network `cto_net`, chạy trên localhost.
-- **Dataset:** 10,000 rows, `seed=42`, phân phối `hash(machine_id) % 3`.
+- **Dataset:** 10,000 rows, `seed=42`, phân phối `stable_hash(machine_id) % 3`.
 - **Workload:** 1,000 transactions mỗi run; mix 60% T_advance / 30% T_complete / 10% T_handoff.
 - **Lặp lại:** Mỗi cấu hình chạy ít nhất 3 lần; lấy median để giảm nhiễu cold-start.
 

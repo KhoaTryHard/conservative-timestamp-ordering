@@ -37,6 +37,8 @@ def generate(rows: int, seed: int, out_dir: str) -> None:
 
     for site_idx, rows_list in site_rows.items():
         db_path = os.path.join(out_dir, _SITE_FILES[site_idx])
+        if os.path.exists(db_path):
+            os.remove(db_path)
         conn = sqlite3.connect(db_path)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS Assembly_Line_Steps (

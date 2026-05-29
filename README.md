@@ -20,7 +20,7 @@ Hiện thực giao thức **Conservative Timestamp Ordering (CTO)** cho hệ th�
 ```
 
 - **3 sites** (`site_a` port 8001, `site_b` 8002, `site_c` 8003).
-- **Fragmentation:** `hash(machine_id) % 3` — each site owns ~33% of `Assembly_Line_Steps`.
+- **Fragmentation:** `stable_hash(machine_id) % 3` using `hashlib.blake2b` — each site owns ~33% of `Assembly_Line_Steps`.
 - **Scheduler:** CTO (default) or Basic TO — toggled via `SCHED_MODE` env var.
 - **Dummy heartbeat:** every `DUMMY_INTERVAL_MS=50` ms from idle TMs → keeps remote queues non-empty.
 
@@ -85,7 +85,7 @@ SCHED_MODE=basic_to docker compose up --build
 
 ## Reproduce Latency Experiment
 
-Run both schedulers with the same seed, same transaction count:
+Restart the cluster with the matching `SCHED_MODE`, then run each benchmark with the same seed and transaction count. The runner checks `/healthz` and fails fast if the running scheduler mode does not match `--mode`.
 
 ```bash
 python -m experiments.experiment_runner \
@@ -139,7 +139,7 @@ Key test files:
 | File | Coverage |
 |---|---|
 | `tests/test_clock_sync.py` | Monotonicity, tiebreak, observe |
-| `tests/test_hash_partition.py` | Determinism, balance, valid index |
+| `tests/test_hash_partition.py` | Cross-process determinism, balance, valid index |
 | `tests/test_queue_manager.py` | `all_non_empty`, `pop_min` ordering, edge cases |
 
 ## Configuration Reference

@@ -61,7 +61,7 @@ Assembly Line  →  [M-001] PENDING → IN_PROGRESS → COMPLETED
 
 **Bullet points:**
 - 3 sites = 3 Docker containers, bridge network `cto_net`
-- Phân mảnh: `hash(machine_id) % 3` → site 0/1/2 (~33% mỗi site)
+- Phân mảnh: `stable_hash(machine_id) % 3` (`hashlib.blake2b`) → site 0/1/2 (~33% mỗi site)
 - `Timestamp = (counter, site_id)` — không cần NTP
 - `T_dummy = 50ms` — heartbeat ngăn stall vô hạn
 
