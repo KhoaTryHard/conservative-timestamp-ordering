@@ -2,7 +2,7 @@
 
 **Môn học:** Distributed Database Systems  
 **Đề tài #27 — Category 3: Distributed Concurrency Control**  
-**Nhóm:** [Team Name — TBD] | **Thành viên:** [TBD]  
+**Sinh viên thực hiện:** Nguyễn Đăng Khoa (N23DCCN030)  
 **Ngày:** 2026-05-16
 
 ---
@@ -49,7 +49,7 @@ CTO loại bỏ restart bằng cách **trì hoãn** thay vì **từ chối** *(�
 
 Để tránh stall vô hạn khi TM không có operation thực sự gửi đến, mỗi TM phát **dummy message** với `min_future_ts` sau mỗi khoảng `T_dummy` *(Özsu & Valduriez 2020, §5.2.2.2, tr. 202)*. Dummy message không mang thao tác dữ liệu; chỉ đóng vai trò heartbeat để Scheduler biết rằng TM đó tạm thời không có operation timestamp nhỏ hơn `min_future_ts`.
 
-**Tính chịu lỗi:** Nếu một site bị crash, `Q^t_s` của site đó (tại các Scheduler khác) không bao giờ được bổ sung → điều kiện `all_non_empty()` không thỏa mãn → hệ thống **stall** (không abort, không mất dữ liệu). Khi site khởi động lại, dummy messages sẽ unblock các hàng đợi và hệ thống tiếp tục từ chính xác điểm stall. Đây là trade-off đặc trưng của CTO so với Basic TO (vốn restart ngay khi phát hiện vi phạm).
+**Tính chịu lỗi:** Nếu một site bị crash, `Q^t_s` của site đó (tại các Scheduler khác) không bao giờ được bổ sung → điều kiện `all_non_empty()` không thỏa mãn → hệ thống **stall** (không abort, không mất dữ liệu). Khi site khởi động lại, dummy messages sẽ unblock các hàng đợi và hệ thống tiếp tục từ chính xác điểm stall. Đây là sự đánh đổi đặc trưng của CTO so với Basic TO (vốn restart ngay khi phát hiện vi phạm).
 
 ---
 
