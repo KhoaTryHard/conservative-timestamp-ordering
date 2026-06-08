@@ -1,6 +1,5 @@
 """Unit tests for QueueManager — enqueue, all_non_empty, pop_min ordering."""
 
-import pytest
 from src.common.messages import Operation, OpType, Timestamp
 from src.scheduler.queue_manager import QueueManager
 

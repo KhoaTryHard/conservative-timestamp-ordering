@@ -45,8 +45,12 @@ class BasicTOScheduler:
                         op.ts.as_tuple(),
                         wts.as_tuple(),
                         op.tx_id,
-                        extra={"site": self._site_id, "ts": op.ts.as_tuple(),
-                               "op": "READ_REJECT", "tx_id": op.tx_id},
+                        extra={
+                            "site": self._site_id,
+                            "ts": op.ts.as_tuple(),
+                            "op": "READ_REJECT",
+                            "tx_id": op.tx_id,
+                        },
                     )
                     return OpResult(ok=False, error="RESTART")
                 return self._dp.apply_read(op.item, op.ts)
@@ -59,8 +63,12 @@ class BasicTOScheduler:
                         "basic_to reject WRITE ts=%s tx_id=%s",
                         op.ts.as_tuple(),
                         op.tx_id,
-                        extra={"site": self._site_id, "ts": op.ts.as_tuple(),
-                               "op": "WRITE_REJECT", "tx_id": op.tx_id},
+                        extra={
+                            "site": self._site_id,
+                            "ts": op.ts.as_tuple(),
+                            "op": "WRITE_REJECT",
+                            "tx_id": op.tx_id,
+                        },
                     )
                     return OpResult(ok=False, error="RESTART")
                 return self._dp.apply_write(op.item, op.value or "", op.ts)

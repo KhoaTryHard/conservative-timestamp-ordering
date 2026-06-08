@@ -197,7 +197,7 @@ async def run_experiment(
 
     Workload mix (representative of Automated Manufacturing):
         60% T_advance  (single-site WRITE Status=IN_PROGRESS)
-        30% T_complete (single-site WRITE Status=DONE)
+        30% T_complete (single-site WRITE Status=COMPLETED)
         10% T_handoff  (cross-site WRITE at two sites)
     """
     rng = random.Random(seed)
@@ -240,13 +240,6 @@ def main() -> None:
     parser.add_argument("--txs", type=int, default=1000, help="Number of transactions")
     parser.add_argument("--seed", type=int, default=42, help="Workload RNG seed")
     parser.add_argument("--out", type=str, required=True, help="Output JSON path")
-    parser.add_argument(
-        "--dummy-interval-ms",
-        type=int,
-        default=50,
-        dest="dummy_interval_ms",
-        help="Override DUMMY_INTERVAL_MS for this run (sweep experiment)",
-    )
     args = parser.parse_args()
 
     collector = LatencyCollector()

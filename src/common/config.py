@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class SiteConfig:
-    """Single source of truth for runtime knobs declared in CLAUDE.md."""
+    """Single source of truth for per-site runtime settings."""
 
     site_id: int
     sched_mode: str
@@ -16,7 +16,6 @@ class SiteConfig:
     stall_warn_ms: int
     db_path: str
     peer_urls: list[str]
-    workload_txs: int
 
     @classmethod
     def from_env(cls) -> "SiteConfig":
@@ -28,7 +27,6 @@ class SiteConfig:
         db_path = os.environ["DB_PATH"]
         peer_urls_raw = os.environ["PEER_URLS"]
         peer_urls = [u.strip() for u in peer_urls_raw.split(",") if u.strip()]
-        workload_txs = int(os.environ.get("WORKLOAD_TXS", "1000"))
         return cls(
             site_id=site_id,
             sched_mode=sched_mode,
@@ -36,5 +34,4 @@ class SiteConfig:
             stall_warn_ms=stall_warn_ms,
             db_path=db_path,
             peer_urls=peer_urls,
-            workload_txs=workload_txs,
         )

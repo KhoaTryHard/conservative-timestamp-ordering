@@ -21,12 +21,3 @@ experiments/results/
 
 # Log files
 *.log
-
-# Claude Code (AI tool operational files — not part of deliverables)
-CLAUDE.md
-.claude/
-PROMPT_CTO_Project27.md
-
-# script demo
-docs/live_demo_script.txt
-docs/live_demo_script_updated.txt

@@ -50,9 +50,15 @@ class DummyMessageGenerator:
                         )
                     except Exception as exc:
                         logger.debug(
-                            "dummy POST to %s failed: %s", url, exc,
-                            extra={"site": self._tm_id, "ts": None,
-                                   "op": "DUMMY_FAIL", "tx_id": ""},
+                            "dummy POST to %s failed: %s",
+                            url,
+                            exc,
+                            extra={
+                                "site": self._tm_id,
+                                "ts": None,
+                                "op": "DUMMY_FAIL",
+                                "tx_id": "",
+                            },
                         )
 
     def stop(self) -> None:

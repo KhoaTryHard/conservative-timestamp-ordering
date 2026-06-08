@@ -38,9 +38,7 @@ def create_app() -> FastAPI:
         # Build site_id -> URL map
         all_sites = list(range(_NUM_SITES))
         peer_sites = sorted(s for s in all_sites if s != config.site_id)
-        scheduler_urls: dict[int, str] = {
-            config.site_id: "http://localhost:8000"
-        }
+        scheduler_urls: dict[int, str] = {config.site_id: "http://localhost:8000"}
         for i, peer_site in enumerate(peer_sites):
             if i < len(config.peer_urls):
                 scheduler_urls[peer_site] = config.peer_urls[i]
@@ -71,16 +69,19 @@ def create_app() -> FastAPI:
         )
         app.state.tm = tm
 
-        # Dummy heartbeat generator — send to ALL schedulers including self,
-        # so Q^{self} at the local scheduler is kept non-empty per §5.2.2.2.
-        all_scheduler_urls = ["http://localhost:8000"] + list(config.peer_urls)
-        dummy_gen = DummyMessageGenerator(
-            tm_id=config.site_id,
-            clock=clock,
-            peer_urls=all_scheduler_urls,
-            interval_ms=config.dummy_interval_ms,
-        )
-        dummy_task = asyncio.create_task(dummy_gen.run_forever())
+        # CTO needs dummy heartbeats to keep every scheduler queue non-empty.
+        # Basic TO executes immediately and does not use the dummy protocol.
+        dummy_gen: DummyMessageGenerator | None = None
+        dummy_task: asyncio.Task | None = None
+        if config.sched_mode == "cto":
+            all_scheduler_urls = ["http://localhost:8000"] + list(config.peer_urls)
+            dummy_gen = DummyMessageGenerator(
+                tm_id=config.site_id,
+                clock=clock,
+                peer_urls=all_scheduler_urls,
+                interval_ms=config.dummy_interval_ms,
+            )
+            dummy_task = asyncio.create_task(dummy_gen.run_forever())
 
         logger.info(
             "site %d started sched_mode=%s",
@@ -92,8 +93,10 @@ def create_app() -> FastAPI:
         try:
             yield
         finally:
-            dummy_gen.stop()
-            dummy_task.cancel()
+            if dummy_gen is not None:
+                dummy_gen.stop()
+            if dummy_task is not None:
+                dummy_task.cancel()
             if release_task is not None:
                 release_task.cancel()
             await tm.close()

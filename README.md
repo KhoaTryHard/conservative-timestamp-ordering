@@ -1,15 +1,15 @@
 # Conservative Timestamp Ordering for Fault-Tolerant Assembly-Line Scheduling
 
-**Project #27 — Category 3: Distributed Concurrency Control**
+**Project #27 - Category 3: Distributed Concurrency Control**  
 Course: Distributed Database Systems
 
-Hiện thực giao thức **Conservative Timestamp Ordering (CTO)** cho hệ thống sản xuất tự động (Automated Manufacturing), so sánh trực tiếp với **Basic TO (Project #24)** trên cùng workload. Lý thuyết theo Özsu & Valduriez 2020, §5.2.2.2 (tr. 201–203).
+Hiện thực giao thức **Conservative Timestamp Ordering (CTO)** cho hệ thống sản xuất tự động (Automated Manufacturing), đồng thời so sánh trực tiếp với **Basic TO (Project #24)** trên cùng workload. Cơ sở lý thuyết theo Özsu & Valduriez 2020, Section 5.2.2.2, pages 201-203.
 
 ---
 
 ## Architecture
 
-```
+```text
 +----------+   HTTP/REST   +----------+   HTTP/REST   +----------+
 | site_a   |<------------>| site_b   |<------------>| site_c   |
 | TM + SC  |              | TM + SC  |              | TM + SC  |
@@ -19,37 +19,60 @@ Hiện thực giao thức **Conservative Timestamp Ordering (CTO)** cho hệ th�
      +------- cto_net (Docker bridge network) -----------+
 ```
 
-- **3 sites** (`site_a` port 8001, `site_b` 8002, `site_c` 8003).
-- **Fragmentation:** `stable_hash(machine_id) % 3` using `hashlib.blake2b` — each site owns ~33% of `Assembly_Line_Steps`.
-- **Scheduler:** CTO (default) or Basic TO — toggled via `SCHED_MODE` env var.
-- **Dummy heartbeat:** every `DUMMY_INTERVAL_MS=50` ms from idle TMs → keeps remote queues non-empty.
+- **3 sites:** `site_a` port `8001`, `site_b` port `8002`, `site_c` port `8003`.
+- **Fragmentation:** `stable_hash(machine_id) % 3` using `hashlib.blake2b`; each site owns about one third of `Assembly_Line_Steps`.
+- **Scheduler:** CTO by default, or Basic TO via `SCHED_MODE=basic_to`.
+- **Dummy heartbeat:** used by CTO mode only; idle TMs send dummy messages every `DUMMY_INTERVAL_MS=50` ms so remote queues do not stay empty. Basic TO executes immediately and does not use the dummy protocol.
 
 ## Prerequisites
 
 - Python 3.11+
 - Docker + Docker Compose v2
-- (optional) `pandoc` for docx conversion
 
 ## Installation
+
+PowerShell:
+
+```powershell
+git clone <repo-url>
+cd <repo>
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+```
+
+Bash/macOS/Linux:
 
 ```bash
 git clone <repo-url>
 cd <repo>
 python -m venv .venv
-. .venv/Scripts/activate          # Windows
-# . .venv/bin/activate            # macOS/Linux
+source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
 ## Generate Dataset
 
-```bash
+```powershell
 python -m data.data_generator --rows 10000 --seed 42 --out data/
 ```
 
-Tạo `data/site_a.db`, `data/site_b.db`, `data/site_c.db` — mỗi file chứa bảng `Assembly_Line_Steps` và `step_meta` (rts/wts).
+This creates `data/site_a.db`, `data/site_b.db`, and `data/site_c.db`. Each fragment contains `Assembly_Line_Steps` and `step_meta` tables.
 
-## Run — Single Site (no Docker)
+## Run - Single Site Without Docker
+
+PowerShell:
+
+```powershell
+$env:SITE_ID = "0"
+$env:SCHED_MODE = "cto"
+$env:DUMMY_INTERVAL_MS = "50"
+$env:DB_PATH = "data/site_a.db"
+$env:PEER_URLS = "http://localhost:8002,http://localhost:8003"
+uvicorn src.api.main:create_app --factory --port 8001
+```
+
+Bash/macOS/Linux:
 
 ```bash
 SITE_ID=0 SCHED_MODE=cto DUMMY_INTERVAL_MS=50 DB_PATH=data/site_a.db \
@@ -59,33 +82,63 @@ SITE_ID=0 SCHED_MODE=cto DUMMY_INTERVAL_MS=50 DB_PATH=data/site_a.db \
 
 Health check:
 
-```bash
-curl http://localhost:8001/healthz
+```powershell
+curl.exe http://localhost:8001/healthz
 ```
 
-## Run — Full Cluster (Docker Compose)
+## Run - Full Cluster With Docker Compose
 
-```bash
-docker compose up --build
+Generate the dataset first, then start all three sites:
+
+```powershell
+python -m data.data_generator --rows 10000 --seed 42 --out data/
+docker compose down --remove-orphans
+$env:SCHED_MODE = "cto"
+docker compose up --build --force-recreate
 ```
 
-Wait for all 3 containers healthy, then:
+After the services finish starting, verify each site through `/healthz`:
 
-```bash
-curl http://localhost:8001/healthz   # site_a
-curl http://localhost:8002/healthz   # site_b
-curl http://localhost:8003/healthz   # site_c
+```powershell
+curl.exe http://localhost:8001/healthz   # site_a
+curl.exe http://localhost:8002/healthz   # site_b
+curl.exe http://localhost:8003/healthz   # site_c
 ```
 
-Switch to Basic TO:
+Switch to Basic TO.
+
+PowerShell:
+
+```powershell
+docker compose down --remove-orphans
+$env:SCHED_MODE = "basic_to"
+docker compose up --build --force-recreate
+```
+
+Bash/macOS/Linux:
 
 ```bash
-SCHED_MODE=basic_to docker compose up --build
+docker compose down --remove-orphans
+SCHED_MODE=basic_to docker compose up --build --force-recreate
 ```
+
+PowerShell environment variables such as `$env:SCHED_MODE` apply only to the current PowerShell session. Set the variable in the same terminal that runs `docker compose up`.
 
 ## Reproduce Latency Experiment
 
-Restart the cluster with the matching `SCHED_MODE`, then run each benchmark with the same seed and transaction count. The runner checks `/healthz` and fails fast if the running scheduler mode does not match `--mode`.
+Regenerate the dataset before each benchmark mode for a fair CTO vs Basic TO comparison, then restart the cluster with the matching `SCHED_MODE`. The runner checks `/healthz` and fails fast if the running scheduler mode does not match `--mode`.
+
+```powershell
+python -m experiments.experiment_runner `
+  --mode cto --txs 1000 --seed 42 `
+  --out experiments/results/cto.json
+
+python -m experiments.experiment_runner `
+  --mode basic_to --txs 1000 --seed 42 `
+  --out experiments/results/basic_to.json
+```
+
+Bash/macOS/Linux:
 
 ```bash
 python -m experiments.experiment_runner \
@@ -97,115 +150,186 @@ python -m experiments.experiment_runner \
   --out experiments/results/basic_to.json
 ```
 
-Sweep `T_dummy` (requires cluster with matching `DUMMY_INTERVAL_MS`):
+Compare two result files:
+
+```powershell
+python -m experiments.compare_results experiments/results/cto.json experiments/results/basic_to.json
+```
+
+Sweep `T_dummy`. The cluster must be recreated with the matching `DUMMY_INTERVAL_MS` before each run.
+
+PowerShell:
+
+```powershell
+foreach ($ms in 10, 50, 100, 500) {
+  docker compose down --remove-orphans
+  $env:DUMMY_INTERVAL_MS = "$ms"
+  $env:SCHED_MODE = "cto"
+  docker compose up -d --build --force-recreate
+  python -m experiments.experiment_runner --mode cto --txs 1000 `
+    --out "experiments/results/cto_dummy${ms}ms.json"
+}
+```
+
+Bash/macOS/Linux:
 
 ```bash
 for ms in 10 50 100 500; do
-  DUMMY_INTERVAL_MS=$ms docker compose up -d --build
+  docker compose down --remove-orphans
+  DUMMY_INTERVAL_MS=$ms SCHED_MODE=cto docker compose up -d --build --force-recreate
   python -m experiments.experiment_runner --mode cto --txs 1000 \
     --out experiments/results/cto_dummy${ms}ms.json
 done
 ```
 
-Results are JSON — `avg_ms`, `p95_ms`, `p99_ms`, `total_restarts` per run.
+Result JSON files include metrics such as `completed`, `avg_ms`, `p95_ms`, `p99_ms`, `max_ms`, and `total_restarts`.
 
 ## Trigger Failure Scenario (D5)
 
-```bash
-# Terminal 1 — start CTO cluster
-SCHED_MODE=cto docker compose up --build
+Terminal 1 - start CTO cluster:
 
-# Terminal 2 — deterministic failure demo
+```powershell
+docker compose down --remove-orphans
+$env:SCHED_MODE = "cto"
+docker compose up --build --force-recreate
+```
+
+Terminal 2 - deterministic failure demo:
+
+```powershell
+python -m experiments.demo_failure --mode cto --seed 42 --kill-site 1 `
+  --kill-delay-sec 5 --restart-delay-sec 8 `
+  --out experiments/results/cto_failure.json
+```
+
+Bash/macOS/Linux:
+
+```bash
 python -m experiments.demo_failure --mode cto --seed 42 --kill-site 1 \
   --kill-delay-sec 5 --restart-delay-sec 8 \
   --out experiments/results/cto_failure.json
 ```
 
-The demo script validates `/healthz`, avoids sending client requests directly to the
-killed container, runs a live-site stall probe during the failure window, then restarts
-`cto-site-b` and writes JSON evidence. Use `--manual-failure` if you want to run
-`docker kill cto-site-b` and `docker start cto-site-b` yourself during a recording.
+The demo script validates `/healthz`, avoids sending client requests directly to the killed container, runs a live-site stall probe during the failure window, restarts `cto-site-b`, and writes JSON evidence. Use `--manual-failure` if you want to run `docker kill cto-site-b` and `docker start cto-site-b` manually during a screen recording.
 
-Legacy manual flow:
+Manual recording flow:
 
-```bash
-docker compose up --build
+```powershell
+# Terminal 2: run the deterministic demo in manual mode
+python -m experiments.demo_failure --mode cto --seed 42 --kill-site 1 `
+  --kill-delay-sec 5 --restart-delay-sec 8 --manual-failure `
+  --out experiments/results/cto_failure.json
 
-# Terminal 2 — run experiment; kill site_b mid-way
-python -m experiments.experiment_runner --mode cto --txs 1000 \
-  --out experiments/results/cto_failure.json &
-
-sleep 30
-docker kill cto-site-b          # site_a & site_c STALL — no abort, no data loss
-
-# After ~10s, restart site_b
-docker start cto-site-b         # cluster resumes from exact stall point
+# Terminal 3: execute when demo_failure.py asks you
+docker kill cto-site-b
+docker start cto-site-b
 ```
 
-**Expected behaviour (CTO):** `site_a` and `site_c` stall while `Q^b_a` and `Q^b_c` drain — no operation is released, no transaction aborts. On `docker start cto-site-b`, catch-up dummy messages unblock the queues and the cluster resumes. This demonstrates the CTO trade-off: eliminates restarts at the cost of delay (Özsu & Valduriez 2020, §5.2.2.2, tr. 202–203).
+Evidence to check in `experiments/results/cto_failure.json`:
+
+- `total_restarts = 0`
+- `stall_probe.completed = false`
+- `unexpected_failures = []`
+
+**Expected CTO behavior:** `site_a` and `site_c` stall while the queues that depend on `site_b` drain. CTO does not release operations prematurely and does not abort transactions. After `docker start cto-site-b`, catch-up dummy messages unblock the queues and the cluster resumes. This demonstrates the CTO trade-off: fewer restarts at the cost of waiting during failures (Özsu & Valduriez 2020, Section 5.2.2.2, pages 202-203).
 
 ## Run Tests
 
-```bash
+```powershell
 pytest -q
 ```
 
-Key test files:
+Current test suite: **18 tests**.
 
 | File | Coverage |
 |---|---|
-| `tests/test_clock_sync.py` | Monotonicity, tiebreak, observe |
-| `tests/test_hash_partition.py` | Cross-process determinism, balance, valid index |
-| `tests/test_queue_manager.py` | `all_non_empty`, `pop_min` ordering, edge cases |
+| `tests/test_clock_sync.py` | Timestamp monotonicity, tiebreaking, observation |
+| `tests/test_hash_partition.py` | Cross-process deterministic partitioning |
+| `tests/test_queue_manager.py` | Queue non-empty checks, min-pop ordering, edge cases |
+| `tests/test_demo_failure.py` | Deterministic failure-demo helpers and result fields |
+| `tests/test_compare_results.py` | JSON comparison table rendering |
 
 ## Configuration Reference
 
 | Env var | Default | Purpose |
 |---|---|---|
-| `SITE_ID` | required | Site index 0/1/2 |
-| `SCHED_MODE` | `cto` | `cto` or `basic_to` |
-| `DUMMY_INTERVAL_MS` | `50` | Heartbeat interval |
-| `STALL_WARN_MS` | `5000` | Log warning when stalled |
-| `DB_PATH` | required | SQLite file path |
+| `SITE_ID` | required | Site index: `0`, `1`, or `2` |
+| `SCHED_MODE` | `cto` | Scheduler mode: `cto` or `basic_to` |
+| `DUMMY_INTERVAL_MS` | `50` | CTO dummy heartbeat interval |
+| `STALL_WARN_MS` | `5000` | Log warning when a scheduler is stalled |
+| `DB_PATH` | required | SQLite fragment path |
 | `PEER_URLS` | required | Comma-separated peer base URLs |
-| `WORKLOAD_TXS` | `1000` | Default benchmark size |
 
 ## Repository Layout
 
-```
+```text
 .
-├── CLAUDE.md                  # Claude Code behavioral contract (auto-loaded)
-├── README.md
-├── docker-compose.yml
-├── pyproject.toml
-├── Dockerfile
-├── src/
-│   ├── common/                # messages.py, clock_sync.py, dummy_msg.py, config.py
-│   ├── tm/                    # transaction_manager.py
-│   ├── scheduler/             # scheduler_cto.py, scheduler_basic_to.py, queue_manager.py
-│   ├── dp/                    # data_processor.py
-│   └── api/                   # main.py (factory), routers.py
-├── data/
-│   └── data_generator.py
-├── experiments/
-│   ├── experiment_runner.py
-│   └── metrics.py
-├── tests/
-│   ├── test_clock_sync.py
-│   ├── test_hash_partition.py
-│   └── test_queue_manager.py
-└── docs/
-    ├── proposal.md            # Deliverable D1
-    ├── design_2page.md        # Deliverable D2
-    └── analysis_report.md     # Deliverable D4 (generated after experiments)
+|-- README.md
+|-- docker-compose.yml
+|-- Dockerfile
+|-- pyproject.toml
+|-- src/
+|   |-- common/              # messages.py, clock_sync.py, dummy_msg.py, config.py
+|   |-- tm/                  # transaction_manager.py
+|   |-- scheduler/           # scheduler_cto.py, scheduler_basic_to.py, queue_manager.py
+|   |-- dp/                  # data_processor.py
+|   `-- api/                 # main.py, routers.py
+|-- data/
+|   `-- data_generator.py
+|-- experiments/
+|   |-- experiment_runner.py
+|   |-- demo_failure.py
+|   |-- compare_results.py
+|   `-- metrics.py
+|-- tests/
+|   |-- test_clock_sync.py
+|   |-- test_hash_partition.py
+|   |-- test_queue_manager.py
+|   |-- test_demo_failure.py
+|   `-- test_compare_results.py
 ```
+
+Generated files are intentionally ignored by git:
+
+- `data/site_*.db`
+- `experiments/results/`
+- Python/test caches
+- `.venv/`
+
+## Submission Checklist
+
+Before packaging the project for submission:
+
+```powershell
+python -m data.data_generator --rows 10000 --seed 42 --out data/
+pytest -q
+docker compose down --remove-orphans
+$env:SCHED_MODE = "cto"
+docker compose up --build --force-recreate
+```
+
+Then verify:
+
+```powershell
+curl.exe http://localhost:8001/healthz
+curl.exe http://localhost:8002/healthz
+curl.exe http://localhost:8003/healthz
+```
+
+Recommended deliverables:
+
+- Source code repository with this README.
+- `README.md` as the main run/reproduction guide.
+- A 3-5 minute screen recording that follows the failure scenario in this README and shows `docker kill cto-site-b`, recovery, and `total_restarts = 0`.
+- Optional experiment JSON files from `experiments/results/` if the instructor asks for raw evidence.
+- Slides or Word/PDF report files if they are submitted separately outside this repository package.
 
 ## Theoretical Reference
 
-M. Tamer Özsu & Patrick Valduriez — *Principles of Distributed Database Systems*, 4th Ed., Springer 2020.
+M. Tamer Özsu and Patrick Valduriez, *Principles of Distributed Database Systems*, 4th Edition, Springer, 2020.
 
 | Section | Pages | Role |
 |---|---|---|
-| §5.2.2 Timestamp Ordering | ~197 | Framework |
-| §5.2.2.1 Basic TO + Algorithms 5.4–5.5 | 198–201 | Baseline (Project #24) |
-| §5.2.2.2 Conservative TO | 201–203 | Core of this project |
+| Section 5.2.2 Timestamp Ordering | about 197 | Timestamp ordering framework |
+| Section 5.2.2.1 Basic TO and Algorithms 5.4-5.5 | 198-201 | Baseline scheduler |
+| Section 5.2.2.2 Conservative TO | 201-203 | Core protocol for this project |
