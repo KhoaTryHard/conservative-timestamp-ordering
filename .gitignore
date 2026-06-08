@@ -5,8 +5,7 @@ __pycache__/
 .venv/
 .env
 
-# Database files (generated, not source)
-data/site_*.db
+# SQLite runtime sidecar files
 data/*.db-journal
 data/*.db-shm
 data/*.db-wal

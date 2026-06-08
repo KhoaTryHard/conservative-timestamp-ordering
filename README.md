@@ -53,11 +53,19 @@ pip install -e ".[dev]"
 
 ## Generate Dataset
 
+The repository includes a generated dataset snapshot for submission:
+
+- `data/site_a.db`
+- `data/site_b.db`
+- `data/site_c.db`
+
+To recreate the same 10,000-row dataset from source, run:
+
 ```powershell
 python -m data.data_generator --rows 10000 --seed 42 --out data/
 ```
 
-This creates `data/site_a.db`, `data/site_b.db`, and `data/site_c.db`. Each fragment contains `Assembly_Line_Steps` and `step_meta` tables.
+Each fragment contains `Assembly_Line_Steps` and `step_meta` tables. Rows are partitioned with `stable_hash(machine_id) % 3`.
 
 ## Run - Single Site Without Docker
 
@@ -275,7 +283,10 @@ Current test suite: **18 tests**.
 |   |-- dp/                  # data_processor.py
 |   `-- api/                 # main.py, routers.py
 |-- data/
-|   `-- data_generator.py
+|   |-- data_generator.py
+|   |-- site_a.db
+|   |-- site_b.db
+|   `-- site_c.db
 |-- experiments/
 |   |-- experiment_runner.py
 |   |-- demo_failure.py
@@ -291,7 +302,7 @@ Current test suite: **18 tests**.
 
 Generated files are intentionally ignored by git:
 
-- `data/site_*.db`
+- SQLite runtime sidecar files: `data/*.db-journal`, `data/*.db-shm`, `data/*.db-wal`
 - `experiments/results/`
 - Python/test caches
 - `.venv/`
